@@ -1,45 +1,26 @@
-# Fake News Detection
+# Fake News Detection API
 
-A machine learning system that classifies news text as **Real** or **Fake**, served through a FastAPI prediction endpoint and packaged with Docker and a GitHub Actions workflow.
+A machine learning model that classifies news text as **Real** or **Fake**, served through a FastAPI prediction endpoint.
 
-Originally developed as a Big Data Analytics project: text processing and model training with PySpark, with the final model exposed as an API.
+Developed as part of a Big Data Analytics course: TF-IDF text features, an XGBoost classifier, and the final model exposed as an API.
 
 ## Overview
 
 | | |
 |---|---|
 | **Task** | Binary text classification (Real vs Fake news) |
-| **Features** | TF-IDF vectorization |
-| **Models compared** | Logistic Regression, Random Forest |
+| **Features** | TF-IDF vectorization (about 212,000-term vocabulary) |
+| **Model** | XGBoost classifier |
 | **Serving** | FastAPI + Uvicorn |
+| **Interface** | Web page served by the API (HTML/CSS/JavaScript) |
 | **Packaging** | Docker, GitHub Actions |
 
-## Dataset
+## How It Works
 
-- **Source:** `<dataset name and link, e.g. Kaggle "Fake and Real News Dataset">`
-- **Size:** `<number of articles>` (`<real count>` real, `<fake count>` fake)
-- **Split:** `<e.g. 80/20 train/test>`
-
-## Approach
-
-1. **Preprocessing:** text cleaning and tokenization (`<describe: lowercasing, stop-word removal, etc.>`).
-2. **Feature extraction:** TF-IDF turns each article into a sparse weighted term vector.
-3. **Training:** Logistic Regression and Random Forest were trained and compared on the same split.
-4. **Selection:** the best-performing model was saved as `best_fake_news_model.pkl` together with the fitted `tfidf_vectorizer.pkl`.
-5. **Serving:** the API loads both files and classifies incoming text.
-
-## Results
-
-Evaluated on the held-out test set:
-
-| Model | Accuracy | Precision | Recall | F1 |
-|---|---|---|---|---|
-| Logistic Regression | `<xx.x%>` | `<xx.x%>` | `<xx.x%>` | `<xx.x%>` |
-| Random Forest | `<xx.x%>` | `<xx.x%>` | `<xx.x%>` | `<xx.x%>` |
-
-![Results](screenshots/results.png)
-
-> **Note on generalization:** public fake news datasets often score very high because articles from the two classes differ in source-specific patterns (datelines, outlet names, formatting). Scores on this dataset may not carry over to news from other sources.
+1. Incoming text is converted into a TF-IDF vector using the saved, fitted vectorizer (`tfidf_vectorizer.pkl`).
+2. The saved **XGBoost** classifier (`best_fake_news_model.pkl`) predicts whether the text is real or fake.
+3. The API returns the label, plus a confidence score when the model supports probability estimates.
+4. A simple web page (served at the home URL) lets anyone paste an article and see the result with a confidence bar.
 
 ## API
 
@@ -57,15 +38,25 @@ Response:
 { "prediction": "Fake News", "confidence": 0.93 }
 ```
 
-`confidence` is included when the saved model supports probability estimates.
+`prediction` is `"Real News"` or `"Fake News"`. `confidence` is included when the saved model supports `predict_proba`. Empty text returns a `400` error.
 
-### `GET /health`
+### `GET /`
 
-Returns `{"status": "API is running"}`.
+Serves the web interface.
 
-Interactive docs are available at `http://localhost:8000/docs` once the server is running.
+### `GET /health` (also `/media`)
 
-## Run locally
+Health check. Returns `{"status": "API is running successfully."}`.
+
+Interactive docs are available at http://localhost:8000/docs once the server is running.
+
+## Screenshots
+
+| Web interface|
+|---|
+| ![Web UI](screenshots/web_ui.png) |
+
+## Run Locally
 
 ```bash
 git clone https://github.com/fizaf0012/fake-news-api.git
@@ -74,7 +65,9 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Then open http://localhost:8000/docs.
+Then open http://localhost:8000 for the web interface, or http://localhost:8000/docs for the interactive API docs.
+
+> The saved vectorizer was created with scikit-learn 1.6.1, so `requirements.txt` pins that version. Using a different version can give a warning or incorrect results. Run `python inspect_model.py` to see what is inside the saved files.
 
 ### With Docker
 
@@ -83,22 +76,46 @@ docker build -t fake-news-api .
 docker run -p 8000:8000 fake-news-api
 ```
 
-## Project structure
+## Project Structure
 
 ```
 fake-news-api/
 ├── main.py                      # FastAPI app
+├── inspect_model.py             # prints model and vectorizer details
+├── static/
+│   └── index.html               # web interface
 ├── best_fake_news_model.pkl     # trained classifier
 ├── tfidf_vectorizer.pkl         # fitted TF-IDF vectorizer
 ├── requirements.txt
 ├── Dockerfile
 ├── .github/workflows/           # CI workflow
-└── screenshots/                 # results and API screenshots
+└── screenshots/                 # web UI and API screenshots
 ```
 
-## Tech stack
+## Limitations
 
-Python · PySpark · scikit-learn · TF-IDF · FastAPI · Uvicorn · Docker · GitHub Actions · AWS S3
+- Public fake news datasets often score very high because articles from the two classes differ in source-specific patterns (datelines, outlet names, formatting). Performance on news from other sources may be lower.
+- The model classifies writing style and vocabulary. It does not check facts.
+- It was trained on full-length articles, so very short text (one sentence) gives unreliable predictions. Paste a full paragraph or article when testing.
+
+## Tech Stack
+
+Python · scikit-learn · XGBoost · TF-IDF · FastAPI · Uvicorn · HTML/CSS/JavaScript · Docker · GitHub Actions
+
+<!--
+OPTIONAL SECTIONS: add these only with numbers you can verify from your notebook or report.
+
+## Dataset
+- Source: <dataset name and link>
+- Size: <number of articles> (<real count> real, <fake count> fake)
+- Split: <e.g. 80/20 train/test>
+
+## Results (held-out test set)
+| Model | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|
+| Logistic Regression | | | | |
+| Random Forest | | | | |
+-->
 
 ## Author
 
